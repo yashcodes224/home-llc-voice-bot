@@ -1,111 +1,111 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Voice Bot Interview - Home.LLC</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100 flex items-center justify-center h-screen">
-  <div class="bg-white p-8 rounded-lg shadow-lg max-w-md w-full text-center">
-    <h1 class="text-2xl font-bold mb-4">Home.LLC Voice Bot Interview</h1>
-    <p class="mb-4 text-gray-600">Click the button to start the voice interview. Speak clearly, and the bot will respond. Use Chrome for best results.</p>
-    <button id="voiceButton" class="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition">Start Voice Interaction</button>
-    <p id="status" class="mt-4 text-gray-500">Status: Idle</p>
-    <p id="transcript" class="mt-2 text-gray-700 hidden"></p>
-    <p id="error" class="mt-2 text-red-600 hidden"></p>
-  </div>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Bot Interview - Home.LLC</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-100 flex items-center justify-center h-screen">
+    <div class="bg-white p-8 rounded-lg shadow-lg max-w-md w-full text-center">
+      <h1 class="text-2xl font-bold mb-4">Home.LLC Voice Bot Interview</h1>
+      <p class="mb-4 text-gray-600">Click the button to start the voice interview. Speak clearly, and the bot will respond. Use Chrome for best results.</p>
+      <button id="voiceButton" class="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition">Start Voice Interaction</button>
+      <p id="status" class="mt-4 text-gray-500">Status: Idle</p>
+      <p id="transcript" class="mt-2 text-gray-700 hidden"></p>
+      <p id="error" class="mt-2 text-red-600 hidden"></p>
+    </div>
 
-  <script>
-    const voiceButton = document.getElementById('voiceButton');
-    const status = document.getElementById('status');
-    const transcript = document.getElementById('transcript');
-    const error = document.getElementById('error');
+    <script>
+      const voiceButton = document.getElementById('voiceButton');
+      const status = document.getElementById('status');
+      const transcript = document.getElementById('transcript');
+      const error = document.getElementById('error');
 
-    let recognition;
-    let isListening = false;
+      let recognition;
+      let isListening = false;
 
-    // Check if Web Speech API is supported
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang = 'en-US';
+      if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = 'en-US';
 
-      recognition.onstart = () => {
-        isListening = true;
-        status.textContent = 'Status: Listening...';
-        voiceButton.textContent = 'Stop Voice Interaction';
-        voiceButton.classList.remove('bg-blue-500', 'hover:bg-blue-600');
-        voiceButton.classList.add('bg-red-500', 'hover:bg-red-600');
-        error.classList.add('hidden');
-      };
-
-      recognition.onresult = async (event) => {
-        const userInput = event.results[0][0].transcript;
-        transcript.textContent = `You said: ${userInput}`;
-        transcript.classList.remove('hidden');
-
-        // Call backend for Gemini API response
-        const response = await getBotResponse(userInput);
-
-        // Speak the response
-        const utterance = new SpeechSynthesisUtterance(response);
-        utterance.lang = 'en-US';
-        if (response.startsWith('Sorry')) {
-          error.textContent = response;
-          error.classList.remove('hidden');
-        } else {
+        recognition.onstart = () => {
+          isListening = true;
+          status.textContent = 'Status: Listening...';
+          voiceButton.textContent = 'Stop Voice Interaction';
+          voiceButton.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+          voiceButton.classList.add('bg-red-500', 'hover:bg-red-600');
           error.classList.add('hidden');
-        }
-        window.speechSynthesis.speak(utterance);
-      };
+        };
 
-      recognition.onend = () => {
-        isListening = false;
-        status.textContent = 'Status: Idle';
-        voiceButton.textContent = 'Start Voice Interaction';
-        voiceButton.classList.remove('bg-red-500', 'hover:bg-red-600');
-        voiceButton.classList.add('bg-blue-500', 'hover:bg-blue-600');
-      };
+        recognition.onresult = async (event) => {
+          const userInput = event.results[0][0].transcript;
+          transcript.textContent = `You said: ${userInput}`;
+          transcript.classList.remove('hidden');
 
-      recognition.onerror = (event) => {
-        status.textContent = `Error: ${event.error}`;
-        error.textContent = 'Speech recognition error. Please try again.';
-        error.classList.remove('hidden');
-      };
-    } else {
-      status.textContent = 'Error: Speech Recognition not supported in this browser.';
-      voiceButton.disabled = true;
-      error.textContent = 'Please use Chrome for voice interaction.';
-      error.classList.remove('hidden');
-    }
+          status.textContent = 'Status: Processing...';
+          const response = await getBotResponse(userInput);
 
-    // Toggle voice interaction
-    voiceButton.addEventListener('click', () => {
-      if (isListening) {
-        recognition.stop();
+          status.textContent = 'Status: Speaking...';
+          const utterance = new SpeechSynthesisUtterance(response);
+          utterance.lang = 'en-US';
+          if (response.startsWith('Sorry')) {
+            error.textContent = response;
+            error.classList.remove('hidden');
+          } else {
+            error.classList.add('hidden');
+          }
+          utterance.onend = () => {
+            status.textContent = 'Status: Idle';
+          };
+          window.speechSynthesis.speak(utterance);
+        };
+
+        recognition.onend = () => {
+          isListening = false;
+          status.textContent = 'Status: Idle';
+          voiceButton.textContent = 'Start Voice Interaction';
+          voiceButton.classList.remove('bg-red-500', 'hover:bg-red-600');
+          voiceButton.classList.add('bg-blue-500', 'hover:bg-blue-600');
+        };
+
+        recognition.onerror = (event) => {
+          status.textContent = `Error: ${event.error}`;
+          error.textContent = 'Speech recognition error. Please try again.';
+          error.classList.remove('hidden');
+        };
       } else {
-        recognition.start();
+        status.textContent = 'Error: Speech Recognition not supported in this browser.';
+        voiceButton.disabled = true;
+        error.textContent = 'Please use Chrome for voice interaction.';
+        error.classList.remove('hidden');
       }
-    });
 
-    // Call backend to get Gemini API response
-    async function getBotResponse(input) {
-      try {
-        const response = await fetch('/.netlify/functions/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ input }),
-        });
-        const data = await response.json();
-        console.log('Backend response:', data); // Debug log
-        return data.response;
-      } catch (error) {
-        console.error('Fetch error:', error); // Debug log
-        return 'Sorry, there was an error processing your request: Network error.';
+      voiceButton.addEventListener('click', () => {
+        if (isListening) {
+          recognition.stop();
+        } else {
+          recognition.start();
+        }
+      });
+
+      async function getBotResponse(input) {
+        try {
+          const response = await fetch('/.netlify/functions/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ input }),
+          });
+          const data = await response.json();
+          console.log('Backend response:', data);
+          return data.response;
+        } catch (error) {
+          console.error('Fetch error:', error);
+          return 'Sorry, there was an error processing your request: Network error.';
+        }
       }
-    }
-  </script>
-</body>
-</html>
+    </script>
+  </body>
+  </html>
