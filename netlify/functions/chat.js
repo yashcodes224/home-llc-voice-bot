@@ -1,7 +1,7 @@
-exports.handler = async function (event) {
+exports.handler = async function (event, context) {
     const { input } = JSON.parse(event.body);
     try {
-      const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2-5-pro:generateContent', {
+      const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-latest:generateContent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -15,16 +15,26 @@ exports.handler = async function (event) {
           }],
         }),
       });
+  
+      if (!response.ok) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+  
       const data = await response.json();
+      if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts[0].text) {
+        throw new Error('Invalid API response format');
+      }
+  
       const reply = data.candidates[0].content.parts[0].text;
       return {
         statusCode: 200,
         body: JSON.stringify({ response: reply }),
       };
     } catch (error) {
+      console.error('Error in Netlify Function:', error.message);
       return {
         statusCode: 500,
-        body: JSON.stringify({ response: 'Sorry, there was an error processing your request.' }),
+        body: JSON.stringify({ response: `Sorry, there was an error processing your request: ${error.message}` }),
       };
     }
   };
